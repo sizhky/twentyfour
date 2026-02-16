@@ -7,6 +7,7 @@ import type { DayTimeline, Mode, TimeSlot } from './lib/types';
 
 type ActiveDrag = 'start' | 'end' | 'move' | null;
 type SheetState = { open: boolean; editingSlotId: string | null; label: string; notes: string };
+type ThemeMode = 'light' | 'dark';
 
 const INITIAL_DRAFT = { startMinute: 9 * 60, endMinute: 10 * 60 };
 
@@ -43,6 +44,11 @@ export default function App(): JSX.Element {
   const [dragging, setDragging] = useState<ActiveDrag>(null);
   const [error, setError] = useState('');
   const [sheet, setSheet] = useState<SheetState>({ open: false, editingSlotId: null, label: '', notes: '' });
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const saved = localStorage.getItem('theme-mode');
+    if (saved === 'light' || saved === 'dark') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
   const [draftStartMinute, setDraftStartMinute] = useState(INITIAL_DRAFT.startMinute);
   const [draftEndMinute, setDraftEndMinute] = useState(INITIAL_DRAFT.endMinute);
   const draftMemoryRef = useRef<Record<string, { startMinute: number; endMinute: number }>>({});
@@ -70,6 +76,11 @@ export default function App(): JSX.Element {
     [timelines, focusDate]
   );
   const activeTimeline = activeMode === 'plan' ? planTimeline : retrospectTimeline;
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme-mode', theme);
+  }, [theme]);
 
   useEffect(() => {
     draftMemoryRef.current[activeDraftKey] = {
@@ -242,6 +253,9 @@ export default function App(): JSX.Element {
       <header className="top">
         <h1>24-Hour Planner</h1>
         <p>Outer ring: Plan | Inner ring: Retrospect</p>
+        <button type="button" className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        </button>
       </header>
       <section className="range-panel">
         <div>
