@@ -159,6 +159,13 @@ export function Clock24({
             key={`active-${slot.id}`}
             d={path}
             className="ring-hit"
+            onPointerEnter={(e) =>
+              onSegmentHover({ text: `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`, x: e.clientX, y: e.clientY })
+            }
+            onPointerMove={(e) =>
+              onSegmentHover({ text: `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`, x: e.clientX, y: e.clientY })
+            }
+            onPointerLeave={() => onSegmentHover(null)}
             onClick={() => onSelectSegment(slot.id)}
           />
         );
