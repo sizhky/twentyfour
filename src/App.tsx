@@ -52,11 +52,12 @@ export default function App(): JSX.Element {
   const [draftStartMinute, setDraftStartMinute] = useState(INITIAL_DRAFT.startMinute);
   const [draftEndMinute, setDraftEndMinute] = useState(INITIAL_DRAFT.endMinute);
   const [currentMinute, setCurrentMinute] = useState(() => new Date().getHours() * 60 + new Date().getMinutes());
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number; slotId?: string } | null>(null);
   const draftMemoryRef = useRef<Record<string, { startMinute: number; endMinute: number }>>({});
   const moveOriginRef = useRef<{ pointerMinute: number; startMinute: number; endMinute: number } | null>(null);
   const syncTimerRef = useRef<number | null>(null);
   const syncingRef = useRef(false);
+  const isTouchRef = useRef(window.matchMedia('(hover: none), (pointer: coarse)').matches);
 
   const focusDate = activeMode === 'plan' ? planDate : retrospectDate;
   const activeDraftKey = timelineKey(activeMode, focusDate);
@@ -355,14 +356,25 @@ export default function App(): JSX.Element {
             moveOriginRef.current = null;
           }}
           onMovePointerDown={startMoveDrag}
-          onSelectSegment={openEditSheet}
+          onSegmentTap={(payload) => {
+            if (isTouchRef.current) setTooltip(payload);
+            else openEditSheet(payload.slotId);
+          }}
           onRecord={openCreateSheet}
           onSegmentHover={setTooltip}
         />
         {tooltip && (
-          <div className="segment-tooltip" style={{ left: tooltip.x + 10, top: tooltip.y - 28 }}>
+          <button
+            type="button"
+            className={`segment-tooltip${tooltip.slotId ? ' clickable' : ''}`}
+            style={{ left: tooltip.x + 10, top: tooltip.y - 28 }}
+            onClick={() => {
+              if (tooltip.slotId) openEditSheet(tooltip.slotId);
+              setTooltip(null);
+            }}
+          >
             {tooltip.text}
-          </div>
+          </button>
         )}
       </div>
       <section className="range-panel saved-panel">

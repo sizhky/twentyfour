@@ -238,6 +238,11 @@ body {
   font-size: 0.75rem;
   white-space: nowrap;
 }
+.segment-tooltip.clickable {
+  pointer-events: auto;
+  border-radius: 999px;
+  cursor: pointer;
+}
 
 .clock-face {
   fill: var(--clock-face);

@@ -14,7 +14,7 @@ type Clock24Props = {
   onMovePointerDown: (x: number, y: number) => void;
   onPointerMove: (x: number, y: number) => void;
   onPointerUp: () => void;
-  onSelectSegment: (slotId: string) => void;
+  onSegmentTap: (payload: { slotId: string; text: string; x: number; y: number }) => void;
   onRecord: () => void;
   onSegmentHover: (payload: { text: string; x: number; y: number } | null) => void;
 };
@@ -88,7 +88,7 @@ export function Clock24({
   onMovePointerDown,
   onPointerMove,
   onPointerUp,
-  onSelectSegment,
+  onSegmentTap,
   onRecord,
   onSegmentHover
 }: Clock24Props): JSX.Element {
@@ -154,19 +154,16 @@ export function Clock24({
 
       {activeSlots.map((slot) => {
         const path = segmentPath(activeRadius, slot.startMinute, slot.endMinute);
+        const text = `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`;
         return (
           <path
             key={`active-${slot.id}`}
             d={path}
             className="ring-hit"
-            onPointerEnter={(e) =>
-              onSegmentHover({ text: `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`, x: e.clientX, y: e.clientY })
-            }
-            onPointerMove={(e) =>
-              onSegmentHover({ text: `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`, x: e.clientX, y: e.clientY })
-            }
+            onPointerEnter={(e) => onSegmentHover({ text, x: e.clientX, y: e.clientY })}
+            onPointerMove={(e) => onSegmentHover({ text, x: e.clientX, y: e.clientY })}
             onPointerLeave={() => onSegmentHover(null)}
-            onClick={() => onSelectSegment(slot.id)}
+            onClick={(e) => onSegmentTap({ slotId: slot.id, text, x: e.clientX, y: e.clientY })}
           />
         );
       })}
