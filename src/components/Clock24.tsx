@@ -19,9 +19,9 @@ type Clock24Props = {
 
 const SIZE = 360;
 const CENTER = SIZE / 2;
-const OUTER_RADIUS = 146;
-const INNER_RADIUS = 102;
-const DRAFT_RADIUS = 124;
+const OUTER_RADIUS = 152;
+const INNER_RADIUS = 86;
+const DRAFT_RADIUS = (OUTER_RADIUS + INNER_RADIUS) / 2;
 const PLAN_VARIANTS = 5;
 const RETRO_VARIANTS = 5;
 
@@ -96,7 +96,7 @@ export function Clock24({
       onPointerCancel={onPointerUp}
       onPointerLeave={onPointerUp}
     >
-      <circle cx={CENTER} cy={CENTER} r={160} className="clock-face" />
+      <circle cx={CENTER} cy={CENTER} r={170} className="clock-face" />
 
       <circle cx={CENTER} cy={CENTER} r={planRadius} className="ring-base plan-base" />
       {planSlots.map((slot, index) => {
@@ -153,7 +153,7 @@ export function Clock24({
       })}
 
       {Array.from({ length: 24 }).map((_, hour) => {
-        const point = handlePoint(hour * 60, 171);
+        const point = handlePoint(hour * 60, 182);
         return (
           <text key={`hour-${hour}`} x={point.x} y={point.y} className="hour-label" textAnchor="middle" dominantBaseline="middle">
             {hourLabel(hour)}
