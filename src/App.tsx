@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BottomSheet } from './components/BottomSheet';
 import { Clock24 } from './components/Clock24';
 import { createId, loadInitialDates, loadTimeline, newSlot, saveTimeline } from './lib/storage';
-import { angleToMinute, formatRange, isOverlapping, minuteToTimeLabel, plusDays, pointToAngle, rangeDuration } from './lib/time';
+import { angleToMinute, formatRange, isOverlapping, plusDays, pointToAngle, rangeDuration } from './lib/time';
 import type { DayTimeline, Mode, TimeSlot } from './lib/types';
 
 type ActiveDrag = 'start' | 'end' | 'move' | null;
@@ -53,6 +53,8 @@ export default function App(): JSX.Element {
   const [draftEndMinute, setDraftEndMinute] = useState(INITIAL_DRAFT.endMinute);
   const draftMemoryRef = useRef<Record<string, { startMinute: number; endMinute: number }>>({});
   const moveOriginRef = useRef<{ pointerMinute: number; startMinute: number; endMinute: number } | null>(null);
+  const syncTimerRef = useRef<number | null>(null);
+  const syncingRef = useRef(false);
 
   const focusDate = activeMode === 'plan' ? planDate : retrospectDate;
   const activeDraftKey = timelineKey(activeMode, focusDate);
@@ -100,6 +102,56 @@ export default function App(): JSX.Element {
     setDraftStartMinute(draft.startMinute);
     setDraftEndMinute(draft.endMinute);
   }, [activeDraftKey, activeTimeline.slots]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        syncingRef.current = true;
+        const res = await fetch(`/api/vault/day?date=${focusDate}`);
+        if (!res.ok) throw new Error(`Pull failed: ${res.status}`);
+        const payload = (await res.json()) as { planSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>; retrospectSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>; filePath: string };
+        if (!alive) return;
+        const makeTimeline = (mode: Mode, slots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>): DayTimeline => ({
+          ...(timelines[timelineKey(mode, focusDate)] ?? loadTimeline(mode, focusDate)),
+          slots: slots.map((slot) => newSlot({ startMinute: slot.startMinute, endMinute: slot.endMinute, label: slot.label, notes: slot.notes }))
+        });
+        persistTimeline(makeTimeline('plan', payload.planSlots));
+        persistTimeline(makeTimeline('retrospect', payload.retrospectSlots));
+        setError(`Synced from ${payload.filePath}`);
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        syncingRef.current = false;
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [focusDate]);
+
+  useEffect(() => {
+    if (syncingRef.current) return;
+    if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = window.setTimeout(async () => {
+      const plan = timelines[timelineKey('plan', focusDate)] ?? loadTimeline('plan', focusDate);
+      const retrospect = timelines[timelineKey('retrospect', focusDate)] ?? loadTimeline('retrospect', focusDate);
+      try {
+        const res = await fetch('/api/vault/day', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: focusDate,
+            planSlots: plan.slots.map((s) => ({ startMinute: s.startMinute, endMinute: s.endMinute, label: s.label, notes: s.notes ?? '' })),
+            retrospectSlots: retrospect.slots.map((s) => ({ startMinute: s.startMinute, endMinute: s.endMinute, label: s.label, notes: s.notes ?? '' }))
+          })
+        });
+        if (!res.ok) throw new Error(`Push failed: ${res.status}`);
+      } catch (e) {
+        setError(String(e));
+      }
+    }, 700);
+  }, [timelines, focusDate]);
 
   function persistTimeline(next: DayTimeline): void {
     saveTimeline(next);
@@ -245,7 +297,6 @@ export default function App(): JSX.Element {
     activeMode === 'plan'
       ? 'What do you intend to do in this time slot?'
       : 'What did you do in this time slot?';
-  const draftLabel = `${minuteToTimeLabel(draftStartMinute)} -> ${minuteToTimeLabel(draftEndMinute)}`;
   const panelClass = activeMode === 'plan' ? 'mode-plan' : 'mode-retro';
 
   return (
@@ -271,6 +322,7 @@ export default function App(): JSX.Element {
       <section className="range-panel">
         <h2 className="date-header">{focusDate}</h2>
         <p className="draft-header">{formatRange(draftStartMinute, draftEndMinute)}</p>
+        <p className="vault-hint">Vault: /Users/yeshwanth/Vault/00-09 Me/03 Daily/YYYY/MM/YYYYMMDD-plan.md</p>
       </section>
       <Clock24
         planSlots={planTimeline.slots}
