@@ -250,48 +250,27 @@ export default function App(): JSX.Element {
 
   return (
     <main className={`app ${panelClass}`}>
-      <header className="top">
-        <h1>24-Hour Planner</h1>
-        <p>Outer ring: Plan | Inner ring: Retrospect</p>
-        <button type="button" className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-        </button>
-      </header>
+      <section className="pill-row">
+        <div className="pill-group">
+          <button type="button" className="pill-btn pill-subtle" onClick={() => shiftFocusDate(-1)}>
+            Prev
+          </button>
+          <button type="button" className="pill-btn pill-subtle" onClick={() => shiftFocusDate(1)}>
+            Next
+          </button>
+        </div>
+        <div className="pill-group">
+          <button type="button" className="pill-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+          <button type="button" className="pill-btn" onClick={() => switchMode(activeMode === 'plan' ? 'retrospect' : 'plan')}>
+            {activeMode === 'plan' ? 'Plan' : 'Retrospect'}
+          </button>
+        </div>
+      </section>
       <section className="range-panel">
-        <div>
-          <strong>Mode</strong>
-          <span>{activeMode}</span>
-        </div>
-        <div>
-          <strong>Date</strong>
-          <span>{focusDate}</span>
-        </div>
-        <div className="sheet-actions">
-          <button type="button" className="ghost" onClick={() => shiftFocusDate(-1)}>
-            Prev Day
-          </button>
-          <button type="button" className="ghost" onClick={() => shiftFocusDate(1)}>
-            Next Day
-          </button>
-          <button
-            type="button"
-            className={activeMode === 'plan' ? 'primary' : 'ghost'}
-            onClick={() => switchMode('plan')}
-          >
-            Plan
-          </button>
-          <button
-            type="button"
-            className={activeMode === 'retrospect' ? 'primary' : 'ghost'}
-            onClick={() => switchMode('retrospect')}
-          >
-            Retrospect
-          </button>
-        </div>
-        <div>
-          <strong>Draft</strong>
-          <span>{formatRange(draftStartMinute, draftEndMinute)}</span>
-        </div>
+        <h2 className="date-header">{focusDate}</h2>
+        <p className="draft-header">{formatRange(draftStartMinute, draftEndMinute)}</p>
       </section>
       <Clock24
         planSlots={planTimeline.slots}
@@ -311,23 +290,25 @@ export default function App(): JSX.Element {
         onSelectSegment={openEditSheet}
         onRecord={openCreateSheet}
       />
-      <section className="range-panel">
-        <strong>Saved Segments ({activeMode})</strong>
+      <section className="range-panel saved-panel">
+        <div className="saved-header">
+          <strong>Saved Segments ({activeMode})</strong>
+          <span>{activeTimeline.slots.length}</span>
+        </div>
         {activeTimeline.slots.length === 0 ? (
           <p>No segments yet. Tap center Record to add one.</p>
         ) : (
-          <ul>
+          <ul className="saved-list">
             {activeTimeline.slots.map((slot) => (
               <li key={slot.id}>
-                <button type="button" className="ghost" onClick={() => openEditSheet(slot.id)}>
-                  {formatRange(slot.startMinute, slot.endMinute)} - {slot.label}
+                <button type="button" className="saved-item" onClick={() => openEditSheet(slot.id)}>
+                  <span className="saved-line">{formatRange(slot.startMinute, slot.endMinute)} - {slot.label}</span>
                 </button>
               </li>
             ))}
           </ul>
         )}
       </section>
-      <p>{modePrompt}</p>
       {!!error && <p className="error">{error}</p>}
       <BottomSheet
         open={sheet.open}
