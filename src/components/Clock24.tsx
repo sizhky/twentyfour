@@ -6,6 +6,7 @@ type Clock24Props = {
   retrospectSlots: TimeSlot[];
   activeSlots: TimeSlot[];
   activeMode: 'plan' | 'retrospect';
+  currentMinute: number;
   startMinute: number;
   endMinute: number;
   onStartPointerDown: () => void;
@@ -15,6 +16,7 @@ type Clock24Props = {
   onPointerUp: () => void;
   onSelectSegment: (slotId: string) => void;
   onRecord: () => void;
+  onSegmentHover: (payload: { text: string; x: number; y: number } | null) => void;
 };
 
 const SIZE = 360;
@@ -23,6 +25,7 @@ const VIEWBOX_PAD = 10;
 const OUTER_RADIUS = 152;
 const INNER_RADIUS = 86;
 const DRAFT_RADIUS = (OUTER_RADIUS + INNER_RADIUS) / 2;
+const OUTER_RING_EDGE_RADIUS = OUTER_RADIUS + 18;
 const PLAN_VARIANTS = 5;
 const RETRO_VARIANTS = 5;
 
@@ -65,11 +68,19 @@ function hourLabel(hour: number): string {
   return hour === 0 ? '24' : String(hour);
 }
 
+function minuteToText(minute: number): string {
+  const safe = ((minute % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  const h = String(Math.floor(safe / 60)).padStart(2, '0');
+  const m = String(safe % 60).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 export function Clock24({
   planSlots,
   retrospectSlots,
   activeSlots,
   activeMode,
+  currentMinute,
   startMinute,
   endMinute,
   onStartPointerDown,
@@ -78,10 +89,12 @@ export function Clock24({
   onPointerMove,
   onPointerUp,
   onSelectSegment,
-  onRecord
+  onRecord,
+  onSegmentHover
 }: Clock24Props): JSX.Element {
   const start = handlePoint(startMinute, DRAFT_RADIUS);
   const end = handlePoint(endMinute, DRAFT_RADIUS);
+  const nowOuter = handlePoint(currentMinute, OUTER_RING_EDGE_RADIUS);
   const span = ((endMinute - startMinute) % MINUTES_PER_DAY + MINUTES_PER_DAY) % MINUTES_PER_DAY;
   const mid = handlePoint((startMinute + span / 2) % MINUTES_PER_DAY, DRAFT_RADIUS);
   const planRadius = activeMode === 'plan' ? OUTER_RADIUS : INNER_RADIUS;
@@ -108,6 +121,13 @@ export function Clock24({
             key={`plan-${slot.id}`}
             d={path}
             className={`ring-segment plan-covered plan-variant-${variant}`}
+            onPointerEnter={(e) =>
+              onSegmentHover({ text: `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`, x: e.clientX, y: e.clientY })
+            }
+            onPointerMove={(e) =>
+              onSegmentHover({ text: `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`, x: e.clientX, y: e.clientY })
+            }
+            onPointerLeave={() => onSegmentHover(null)}
           />
         );
       })}
@@ -121,6 +141,13 @@ export function Clock24({
             key={`retro-${slot.id}`}
             d={path}
             className={`ring-segment retro-covered retro-variant-${variant}`}
+            onPointerEnter={(e) =>
+              onSegmentHover({ text: `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`, x: e.clientX, y: e.clientY })
+            }
+            onPointerMove={(e) =>
+              onSegmentHover({ text: `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`, x: e.clientX, y: e.clientY })
+            }
+            onPointerLeave={() => onSegmentHover(null)}
           />
         );
       })}
@@ -192,6 +219,7 @@ export function Clock24({
           onMovePointerDown(event.clientX, event.clientY);
         }}
       />
+      <line x1={CENTER} y1={CENTER} x2={nowOuter.x} y2={nowOuter.y} className="now-ray" />
       <g role="button" aria-label="Record segment" onClick={onRecord}>
         <circle cx={CENTER} cy={CENTER} r={18} className="record-ring" />
         <circle cx={CENTER} cy={CENTER} r={10} className="record-core" />
