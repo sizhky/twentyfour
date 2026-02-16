@@ -142,6 +142,15 @@ body {
   font-weight: 800;
   font-size: 1.05rem;
 }
+.vault-hint {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .saved-panel { padding-bottom: 8px; }
 .saved-panel {
   flex: 1 1 auto;
