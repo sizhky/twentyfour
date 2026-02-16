@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BottomSheet } from './components/BottomSheet';
 import { Clock24 } from './components/Clock24';
 import { createId, loadInitialDates, loadTimeline, newSlot, saveTimeline } from './lib/storage';
-import { angleToMinute, formatRange, isOverlapping, plusDays, pointToAngle, rangeDuration } from './lib/time';
+import { angleToMinute, formatRange, isOverlapping, plusDays, pointToAngle, rangeDuration, toIsoDate } from './lib/time';
 import type { DayTimeline, Mode, TimeSlot } from './lib/types';
 
 type ActiveDrag = 'start' | 'end' | 'move' | null;
@@ -51,6 +51,8 @@ export default function App(): JSX.Element {
   });
   const [draftStartMinute, setDraftStartMinute] = useState(INITIAL_DRAFT.startMinute);
   const [draftEndMinute, setDraftEndMinute] = useState(INITIAL_DRAFT.endMinute);
+  const [currentMinute, setCurrentMinute] = useState(() => new Date().getHours() * 60 + new Date().getMinutes());
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const draftMemoryRef = useRef<Record<string, { startMinute: number; endMinute: number }>>({});
   const moveOriginRef = useRef<{ pointerMinute: number; startMinute: number; endMinute: number } | null>(null);
   const syncTimerRef = useRef<number | null>(null);
@@ -78,6 +80,13 @@ export default function App(): JSX.Element {
     [timelines, focusDate]
   );
   const activeTimeline = activeMode === 'plan' ? planTimeline : retrospectTimeline;
+
+  useEffect(() => {
+    const update = () => setCurrentMinute(new Date().getHours() * 60 + new Date().getMinutes());
+    update();
+    const id = window.setInterval(update, 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -118,7 +127,7 @@ export default function App(): JSX.Element {
         });
         persistTimeline(makeTimeline('plan', payload.planSlots));
         persistTimeline(makeTimeline('retrospect', payload.retrospectSlots));
-        setError(`Synced from ${payload.filePath}`);
+        setError('');
       } catch (e) {
         setError(String(e));
       } finally {
@@ -213,38 +222,40 @@ export default function App(): JSX.Element {
     setSheet({ open: false, editingSlotId: null, label: '', notes: '' });
   }
 
-  function saveCurrentSlot(payload: { label: string; notes: string }): void {
+  function saveCurrentSlot(payload: { label: string; notes: string; startMinute: number; endMinute: number }): void {
     if (!payload.label) {
       setError('Please add an activity label.');
       return;
     }
-    const duration = rangeDuration({ startMinute: draftStartMinute, endMinute: draftEndMinute });
+    setDraftStartMinute(payload.startMinute);
+    setDraftEndMinute(payload.endMinute);
+    const duration = rangeDuration({ startMinute: payload.startMinute, endMinute: payload.endMinute });
     if (duration <= 0 || duration > 1440) {
       setError('Invalid time range.');
       return;
     }
-    const isSplit = draftEndMinute <= draftStartMinute;
+    const isSplit = payload.endMinute <= payload.startMinute;
     const replaceId = sheet.editingSlotId ?? undefined;
     const groupId = isSplit ? createId() : undefined;
 
     const currentAdditions: TimeSlot[] = [];
     if (isSplit) {
-      if (isOverlapping(activeTimeline.slots, draftStartMinute, 1440, replaceId)) {
+      if (isOverlapping(activeTimeline.slots, payload.startMinute, 1440, replaceId)) {
         setError('Selected range overlaps an existing segment.');
         return;
       }
       currentAdditions.push(
-        newSlot({ startMinute: draftStartMinute, endMinute: 1440, label: payload.label, notes: payload.notes, groupId })
+        newSlot({ startMinute: payload.startMinute, endMinute: 1440, label: payload.label, notes: payload.notes, groupId })
       );
     } else {
-      if (isOverlapping(activeTimeline.slots, draftStartMinute, draftEndMinute, replaceId)) {
+      if (isOverlapping(activeTimeline.slots, payload.startMinute, payload.endMinute, replaceId)) {
         setError('Selected range overlaps an existing segment.');
         return;
       }
       currentAdditions.push(
         newSlot({
-          startMinute: draftStartMinute,
-          endMinute: draftEndMinute,
+          startMinute: payload.startMinute,
+          endMinute: payload.endMinute,
           label: payload.label,
           notes: payload.notes
         })
@@ -260,13 +271,13 @@ export default function App(): JSX.Element {
     if (isSplit) {
       const nextDate = plusDays(focusDate, 1);
       const nextTimeline = timelines[timelineKey(activeMode, nextDate)] ?? loadTimeline(activeMode, nextDate);
-      if (isOverlapping(nextTimeline.slots, 0, draftEndMinute)) {
+      if (isOverlapping(nextTimeline.slots, 0, payload.endMinute)) {
         setError('Next-day portion overlaps an existing segment.');
         return;
       }
       const nextSlot = newSlot({
         startMinute: 0,
-        endMinute: draftEndMinute,
+        endMinute: payload.endMinute,
         label: payload.label,
         notes: payload.notes,
         groupId
@@ -275,7 +286,7 @@ export default function App(): JSX.Element {
       persistTimeline(updatedNext);
     }
 
-    const newStart = draftEndMinute;
+    const newStart = payload.endMinute;
     const suggestedEnd = nextValidAutoEnd(updatedCurrent.slots, newStart, duration);
     setDraftStartMinute(newStart);
     if (suggestedEnd !== null) setDraftEndMinute(suggestedEnd);
@@ -306,6 +317,9 @@ export default function App(): JSX.Element {
           <button type="button" className="pill-btn pill-subtle" onClick={() => shiftFocusDate(-1)}>
             Prev
           </button>
+          <button type="button" className="pill-btn pill-subtle" onClick={() => setFocusDate(toIsoDate(new Date()))}>
+            Today
+          </button>
           <button type="button" className="pill-btn pill-subtle" onClick={() => shiftFocusDate(1)}>
             Next
           </button>
@@ -324,24 +338,33 @@ export default function App(): JSX.Element {
         <p className="draft-header">{formatRange(draftStartMinute, draftEndMinute)}</p>
         <p className="vault-hint">Vault: /Users/yeshwanth/Vault/00-09 Me/03 Daily/YYYY/MM/YYYYMMDD-plan.md</p>
       </section>
-      <Clock24
-        planSlots={planTimeline.slots}
-        retrospectSlots={retrospectTimeline.slots}
-        activeSlots={activeTimeline.slots}
-        activeMode={activeMode}
-        startMinute={draftStartMinute}
-        endMinute={draftEndMinute}
-        onStartPointerDown={() => setDragging('start')}
-        onEndPointerDown={() => setDragging('end')}
-        onPointerMove={setMinuteFromPointer}
-        onPointerUp={() => {
-          setDragging(null);
-          moveOriginRef.current = null;
-        }}
-        onMovePointerDown={startMoveDrag}
-        onSelectSegment={openEditSheet}
-        onRecord={openCreateSheet}
-      />
+      <div className="clock-wrap">
+        <Clock24
+          planSlots={planTimeline.slots}
+          retrospectSlots={retrospectTimeline.slots}
+          activeSlots={activeTimeline.slots}
+          activeMode={activeMode}
+          currentMinute={currentMinute}
+          startMinute={draftStartMinute}
+          endMinute={draftEndMinute}
+          onStartPointerDown={() => setDragging('start')}
+          onEndPointerDown={() => setDragging('end')}
+          onPointerMove={setMinuteFromPointer}
+          onPointerUp={() => {
+            setDragging(null);
+            moveOriginRef.current = null;
+          }}
+          onMovePointerDown={startMoveDrag}
+          onSelectSegment={openEditSheet}
+          onRecord={openCreateSheet}
+          onSegmentHover={setTooltip}
+        />
+        {tooltip && (
+          <div className="segment-tooltip" style={{ left: tooltip.x + 10, top: tooltip.y - 28 }}>
+            {tooltip.text}
+          </div>
+        )}
+      </div>
       <section className="range-panel saved-panel">
         <div className="saved-header">
           <strong>Saved Segments ({activeMode})</strong>
@@ -368,6 +391,8 @@ export default function App(): JSX.Element {
         prompt={modePrompt}
         initialLabel={sheet.label}
         initialNotes={sheet.notes}
+        initialStartMinute={draftStartMinute}
+        initialEndMinute={draftEndMinute}
         submitLabel="Save"
         error={error}
         isEditing={!!sheet.editingSlotId}

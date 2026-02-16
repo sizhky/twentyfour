@@ -108,15 +108,17 @@ body {
 :root[data-theme="light"] .mode-plan { background: linear-gradient(180deg, #eef6ff 0%, #f7fbff 100%); }
 :root[data-theme="light"] .mode-retro { background: linear-gradient(180deg, #fff7ef 0%, #fffaf4 100%); }
 
-.pill-row { display: flex; justify-content: space-between; margin-top: 8px; }
-.pill-group { display: flex; gap: 10px; }
+.pill-row { display: flex; justify-content: space-between; margin-top: 6px; }
+.pill-group { display: flex; gap: 6px; }
 .pill-btn {
   border: 1px solid var(--card-border);
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 4px 8px;
   background: var(--card-bg);
   color: var(--text);
   font-weight: 700;
+  font-size: 0.75rem;
+  line-height: 1.1;
 }
 .pill-subtle {
   background: color-mix(in srgb, var(--card-bg) 65%, transparent);
@@ -266,6 +268,7 @@ body {
 .dial-start { fill: #f59e0b; }
 .dial-end { fill: #334155; }
 .dial-move { fill: #ffffff; stroke: #0f172a; stroke-dasharray: 2 1; }
+.now-ray { stroke: #facc15; stroke-width: 0.25; stroke-linecap: round; opacity: 0.95; }
 .clock-center { fill: #0f172a; }
 .record-ring { fill: #ffffff; stroke: #0f172a; stroke-width: 2; cursor: pointer; }
 .record-core { fill: #dc2626; cursor: pointer; }
@@ -309,3 +312,4 @@ body {
 .ghost, .primary { border: 0; border-radius: 10px; padding: 10px 12px; font-weight: 700; cursor: pointer; }
 .ghost { background: #e2e8f0; color: #0f172a; }
 .primary { background: #0f172a; color: #ffffff; }
+.time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
