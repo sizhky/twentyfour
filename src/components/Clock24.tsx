@@ -21,7 +21,7 @@ const SIZE = 360;
 const CENTER = SIZE / 2;
 const OUTER_RADIUS = 146;
 const INNER_RADIUS = 102;
-const DRAFT_RADIUS = 121;
+const DRAFT_RADIUS = 124;
 const PLAN_VARIANTS = 5;
 const RETRO_VARIANTS = 5;
 

@@ -2,6 +2,60 @@
   font-family: "Avenir Next", "Segoe UI", sans-serif;
   color: #1f2a37;
   background: #f4f7ff;
+  --text: #1f2a37;
+  --background: #f4f7ff;
+  --muted: #4b5563;
+  --card-bg: #ffffff;
+  --card-border: #dbe5f3;
+  --clock-face: #ffffff;
+  --clock-stroke: #0f172a;
+  --ring-plan-base: #d1d9e5;
+  --ring-retro-base: #e5e7eb;
+  --overlay: rgba(15, 23, 42, 0.55);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #e5e7eb;
+    background: #0b1220;
+    --text: #e5e7eb;
+    --background: #0b1220;
+    --muted: #a3b1c6;
+    --card-bg: #111827;
+    --card-border: #253247;
+    --clock-face: #0f172a;
+    --clock-stroke: #cbd5e1;
+    --ring-plan-base: #334155;
+    --ring-retro-base: #263241;
+    --overlay: rgba(2, 6, 23, 0.72);
+  }
+}
+:root[data-theme="dark"] {
+  color: #e5e7eb;
+  background: #0b1220;
+  --text: #e5e7eb;
+  --background: #0b1220;
+  --muted: #a3b1c6;
+  --card-bg: #111827;
+  --card-border: #253247;
+  --clock-face: #0f172a;
+  --clock-stroke: #cbd5e1;
+  --ring-plan-base: #334155;
+  --ring-retro-base: #263241;
+  --overlay: rgba(2, 6, 23, 0.72);
+}
+:root[data-theme="light"] {
+  color: #1f2a37;
+  background: #f4f7ff;
+  --text: #1f2a37;
+  --background: #f4f7ff;
+  --muted: #4b5563;
+  --card-bg: #ffffff;
+  --card-border: #dbe5f3;
+  --clock-face: #ffffff;
+  --clock-stroke: #0f172a;
+  --ring-plan-base: #d1d9e5;
+  --ring-retro-base: #e5e7eb;
+  --overlay: rgba(15, 23, 42, 0.55);
 }
 
 * {
@@ -12,6 +66,8 @@ body {
   margin: 0;
   min-height: 100dvh;
   overflow: hidden;
+  color: var(--text);
+  background: var(--background, transparent);
 }
 
 #root {
@@ -33,6 +89,18 @@ body {
 .mode-retro {
   background: linear-gradient(180deg, #fff7ef 0%, #fffaf4 100%);
 }
+@media (prefers-color-scheme: dark) {
+  .mode-plan {
+    background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+  }
+  .mode-retro {
+    background: linear-gradient(180deg, #141414 0%, #1a1f2a 100%);
+  }
+}
+:root[data-theme="dark"] .mode-plan { background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%); }
+:root[data-theme="dark"] .mode-retro { background: linear-gradient(180deg, #141414 0%, #1a1f2a 100%); }
+:root[data-theme="light"] .mode-plan { background: linear-gradient(180deg, #eef6ff 0%, #f7fbff 100%); }
+:root[data-theme="light"] .mode-retro { background: linear-gradient(180deg, #fff7ef 0%, #fffaf4 100%); }
 
 .top h1 {
   margin: 0;
@@ -41,15 +109,23 @@ body {
 
 .top p {
   margin: 6px 0 0;
-  color: #4b5563;
+  color: var(--muted);
+}
+.theme-toggle {
+  margin-top: 8px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--card-bg);
+  color: var(--text);
 }
 
 .range-panel {
   margin-top: 16px;
   padding: 12px;
   border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid #dbe5f3;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
 }
 
 .error {
@@ -69,8 +145,8 @@ body {
 }
 
 .clock-face {
-  fill: #ffffff;
-  stroke: #0f172a;
+  fill: var(--clock-face);
+  stroke: var(--clock-stroke);
   stroke-width: 2;
 }
 
@@ -79,8 +155,8 @@ body {
   stroke-width: 24;
 }
 
-.plan-base { stroke: #d1d9e5; }
-.retro-base { stroke: #e5e7eb; }
+.plan-base { stroke: var(--ring-plan-base); }
+.retro-base { stroke: var(--ring-retro-base); }
 .ring-segment { fill: none; stroke-linecap: butt; stroke-width: 24; shape-rendering: crispEdges; }
 .plan-covered { stroke: #2563eb; }
 .retro-covered { stroke: #ea580c; }
@@ -120,7 +196,7 @@ body {
 .sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: var(--overlay);
   backdrop-filter: blur(2px);
   display: grid;
   place-items: center;
@@ -130,15 +206,15 @@ body {
 
 .sheet {
   width: min(420px, 100%);
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: 14px;
-  border: 1px solid #dbe5f3;
+  border: 1px solid var(--card-border);
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.35);
   padding: 14px;
 }
 
 .sheet h2 { margin: 0 0 6px; }
-.sheet p { margin: 0 0 10px; color: #475569; }
+.sheet p { margin: 0 0 10px; color: var(--muted); }
 .sheet label { display: block; font-weight: 600; margin-top: 10px; }
 .sheet input, .sheet textarea {
   width: 100%;
@@ -147,6 +223,8 @@ body {
   border-radius: 10px;
   padding: 10px;
   font: inherit;
+  color: var(--text);
+  background: var(--clock-face);
 }
 
 .sheet-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
