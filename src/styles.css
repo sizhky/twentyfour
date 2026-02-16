@@ -1,0 +1,155 @@
+:root {
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: #1f2a37;
+  background: #f4f7ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+.app {
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding: 8px 12px 0;
+  overflow: hidden;
+}
+
+.mode-plan {
+  background: linear-gradient(180deg, #eef6ff 0%, #f7fbff 100%);
+}
+
+.mode-retro {
+  background: linear-gradient(180deg, #fff7ef 0%, #fffaf4 100%);
+}
+
+.top h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.top p {
+  margin: 6px 0 0;
+  color: #4b5563;
+}
+
+.range-panel {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #dbe5f3;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.clock {
+  width: 100%;
+  max-width: min(420px, 100vw - 24px);
+  max-height: calc(100dvh - 16px);
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.clock-face {
+  fill: #ffffff;
+  stroke: #0f172a;
+  stroke-width: 2;
+}
+
+.ring-base {
+  fill: none;
+  stroke-width: 24;
+}
+
+.plan-base { stroke: #d1d9e5; }
+.retro-base { stroke: #e5e7eb; }
+.ring-segment { fill: none; stroke-linecap: butt; stroke-width: 24; shape-rendering: crispEdges; }
+.plan-covered { stroke: #2563eb; }
+.retro-covered { stroke: #ea580c; }
+.plan-variant-0 { stroke: #2563eb; }
+.plan-variant-1 { stroke: #0ea5e9; }
+.plan-variant-2 { stroke: #06b6d4; }
+.plan-variant-3 { stroke: #14b8a6; }
+.plan-variant-4 { stroke: #22c55e; }
+.retro-variant-0 { stroke: #ea580c; }
+.retro-variant-1 { stroke: #f59e0b; }
+.retro-variant-2 { stroke: #f97316; }
+.retro-variant-3 { stroke: #e11d48; }
+.retro-variant-4 { stroke: #7c3aed; }
+.draft-segment { fill: none; stroke: #14b8a6; stroke-width: 6; stroke-linecap: round; }
+.ring-hit { fill: none; stroke: transparent; stroke-width: 28; cursor: pointer; }
+.ring-hit:focus, .ring-hit:active { outline: none; }
+
+.hour-label {
+  font-size: 10px;
+  font-weight: 700;
+  fill: #111827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.dial { stroke: #0f172a; stroke-width: 2; cursor: grab; }
+.dial:focus, .dial:active { outline: none; }
+.dial-start { fill: #f59e0b; }
+.dial-end { fill: #334155; }
+.dial-move { fill: #ffffff; stroke: #0f172a; stroke-dasharray: 2 1; }
+.clock-center { fill: #0f172a; }
+.record-ring { fill: #ffffff; stroke: #0f172a; stroke-width: 2; cursor: pointer; }
+.record-core { fill: #dc2626; cursor: pointer; }
+.record-ring:focus, .record-core:focus { outline: none; }
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.sheet {
+  width: min(420px, 100%);
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #dbe5f3;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.35);
+  padding: 14px;
+}
+
+.sheet h2 { margin: 0 0 6px; }
+.sheet p { margin: 0 0 10px; color: #475569; }
+.sheet label { display: block; font-weight: 600; margin-top: 10px; }
+.sheet input, .sheet textarea {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+}
+
+.sheet-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.ghost, .primary { border: 0; border-radius: 10px; padding: 10px 12px; font-weight: 700; cursor: pointer; }
+.ghost { background: #e2e8f0; color: #0f172a; }
+.primary { background: #0f172a; color: #ffffff; }
