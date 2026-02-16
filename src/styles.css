@@ -206,6 +206,7 @@ body {
   max-height: calc(100dvh - 16px);
   display: block;
   margin: 10px auto 0;
+  padding: 6px;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;

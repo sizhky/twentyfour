@@ -19,6 +19,7 @@ type Clock24Props = {
 
 const SIZE = 360;
 const CENTER = SIZE / 2;
+const VIEWBOX_PAD = 10;
 const OUTER_RADIUS = 152;
 const INNER_RADIUS = 86;
 const DRAFT_RADIUS = (OUTER_RADIUS + INNER_RADIUS) / 2;
@@ -90,7 +91,7 @@ export function Clock24({
   return (
     <svg
       className="clock"
-      viewBox={`0 0 ${SIZE} ${SIZE}`}
+      viewBox={`${-VIEWBOX_PAD} ${-VIEWBOX_PAD} ${SIZE + VIEWBOX_PAD * 2} ${SIZE + VIEWBOX_PAD * 2}`}
       onPointerMove={(event) => onPointerMove(event.clientX, event.clientY)}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
