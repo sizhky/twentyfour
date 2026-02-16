@@ -223,6 +223,7 @@ export function Clock24({
           onMovePointerDown(event.clientX, event.clientY);
         }}
       />
+      <line x1={CENTER} y1={CENTER} x2={nowOuter.x} y2={nowOuter.y} className="now-ray-under" />
       <line x1={CENTER} y1={CENTER} x2={nowOuter.x} y2={nowOuter.y} className="now-ray" />
       <g role="button" aria-label="Record segment" onClick={onRecord}>
         <circle cx={CENTER} cy={CENTER} r={18} className="record-ring" />

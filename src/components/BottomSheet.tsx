@@ -98,7 +98,7 @@ export function BottomSheet({
         </label>
         <div className="sheet-actions">
           {isEditing && onDelete && (
-            <button type="button" className="ghost" onClick={onDelete}>
+            <button type="button" className="danger" onClick={onDelete}>
               Delete
             </button>
           )}
