@@ -59,6 +59,34 @@ function buildMarkdown(
   ].join('\n');
 }
 
+type SlotPayload = { startMinute: number; endMinute: number; label: string; notes?: string };
+type CrudWhere = Partial<SlotPayload> & { labelContains?: string };
+
+function listDates(fromDate: string, toDate: string): string[] {
+  const out: string[] = [];
+  let cur = new Date(`${fromDate}T00:00:00`);
+  const end = new Date(`${toDate}T00:00:00`);
+  while (cur <= end) {
+    out.push(cur.toISOString().slice(0, 10));
+    cur = new Date(cur.getTime() + 24 * 60 * 60 * 1000);
+  }
+  return out;
+}
+
+function matchesWhere(slot: SlotPayload, where?: CrudWhere): boolean {
+  if (!where) return true;
+  if (where.startMinute !== undefined && slot.startMinute !== where.startMinute) return false;
+  if (where.endMinute !== undefined && slot.endMinute !== where.endMinute) return false;
+  if (where.label !== undefined) {
+    const slotLabel = slot.label.trim().toLowerCase();
+    const whereLabel = where.label.trim().toLowerCase();
+    if (slotLabel !== whereLabel) return false;
+  }
+  if (where.notes !== undefined && (slot.notes ?? '') !== where.notes) return false;
+  if (where.labelContains && !slot.label.toLowerCase().includes(where.labelContains.toLowerCase())) return false;
+  return true;
+}
+
 const vaultPlugin = {
   name: 'vault-sync-mock',
   configureServer(server: import('vite').ViteDevServer) {
@@ -106,6 +134,51 @@ const vaultPlugin = {
             await fs.writeFile(filePath, buildMarkdown(planSlots, retrospectSlots, superseded), 'utf8');
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ ok: true, filePath }));
+          });
+          return;
+        }
+        if (req.method === 'POST' && pathname.endsWith('/crud')) {
+          let body = '';
+          req.on('data', (chunk) => (body += chunk));
+          req.on('end', async () => {
+            const payload = JSON.parse(body) as
+              | { action: 'read'; mode: 'plan' | 'retrospect'; fromDate: string; toDate?: string; where?: CrudWhere }
+              | { action: 'create'; mode: 'plan' | 'retrospect'; date: string; slots: SlotPayload[] }
+              | { action: 'update'; mode: 'plan' | 'retrospect'; date: string; where: CrudWhere; patch: Partial<SlotPayload>; limit?: number }
+              | { action: 'delete'; mode: 'plan' | 'retrospect'; date: string; where: CrudWhere; limit?: number };
+            if (payload.action === 'read') {
+              const dates = listDates(payload.fromDate, payload.toDate ?? payload.fromDate);
+              const results = await Promise.all(dates.map(async (date) => {
+                const filePath = vaultFilePath(date);
+                const md = await fs.readFile(filePath, 'utf8').catch(() => '');
+                const slots = parseSection(md, payload.mode === 'plan' ? 'Plan' : 'Retrospect').filter((s) => matchesWhere(s, payload.where));
+                return { date, mode: payload.mode, slots };
+              }));
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ ok: true, results }));
+              return;
+            }
+            const filePath = vaultFilePath(payload.date);
+            const existing = await fs.readFile(filePath, 'utf8').catch(() => '');
+            const planSlots = parseSection(existing, 'Plan');
+            const retrospectSlots = parseSection(existing, 'Retrospect');
+            const superseded = parseBlock(existing, 'Superseded Plans');
+            const target = payload.mode === 'plan' ? planSlots : retrospectSlots;
+            if (payload.action === 'create') target.push(...payload.slots);
+            if (payload.action === 'update') {
+              let n = 0;
+              for (const slot of target) if (matchesWhere(slot, payload.where) && (!payload.limit || n < payload.limit)) { Object.assign(slot, payload.patch); n += 1; }
+            }
+            if (payload.action === 'delete') {
+              let n = 0;
+              const kept = target.filter((slot) => !(matchesWhere(slot, payload.where) && (!payload.limit || n++ < payload.limit)));
+              target.splice(0, target.length, ...kept);
+            }
+            const normalize = (slots: SlotPayload[]) => slots.sort((a, b) => a.startMinute - b.startMinute);
+            await fs.mkdir(path.dirname(filePath), { recursive: true });
+            await fs.writeFile(filePath, buildMarkdown(normalize(planSlots), normalize(retrospectSlots), superseded), 'utf8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true, date: payload.date, mode: payload.mode }));
           });
           return;
         }

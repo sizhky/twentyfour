@@ -4,6 +4,7 @@ import { Clock24 } from './components/Clock24';
 import { createId, loadInitialDates, loadTimeline, newSlot, saveTimeline } from './lib/storage';
 import { angleToMinute, formatRange, isOverlapping, plusDays, pointToAngle, rangeDuration, toIsoDate } from './lib/time';
 import type { DayTimeline, Mode, TimeSlot } from './lib/types';
+import { registerClockCrudTools } from './lib/webmcp';
 
 type ActiveDrag = 'start' | 'end' | 'move' | null;
 type SheetState = { open: boolean; editingSlotId: string | null; label: string; notes: string };
@@ -93,6 +94,10 @@ export default function App(): JSX.Element {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme-mode', theme);
   }, [theme]);
+
+  useEffect(() => {
+    registerClockCrudTools();
+  }, []);
 
   useEffect(() => {
     draftMemoryRef.current[activeDraftKey] = {
