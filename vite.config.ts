@@ -11,6 +11,16 @@ function vaultFilePath(isoDate: string): string {
   return path.join(VAULT_ROOT, year, month, `${compact}-plan.md`);
 }
 
+function isIsoDate(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function sendBadRequest(res: import('node:http').ServerResponse, message: string): void {
+  res.statusCode = 400;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify({ ok: false, error: message }));
+}
+
 function parseSection(markdown: string, section: 'Plan' | 'Retrospect') {
   const block = markdown.match(new RegExp(`## ${section}\\n([\\s\\S]*?)(\\n## |$)`));
   if (!block?.[1]) return [];
@@ -96,6 +106,10 @@ const vaultPlugin = {
         const pathname = url.pathname;
         if (req.method === 'GET' && pathname.endsWith('/day')) {
           const date = url.searchParams.get('date') ?? '';
+          if (!isIsoDate(date)) {
+            sendBadRequest(res, 'Invalid or missing date (expected YYYY-MM-DD).');
+            return;
+          }
           const filePath = vaultFilePath(date);
           const markdown = await fs.readFile(filePath, 'utf8').catch(() => '# Daily\n\n## Plan\n\n## Retrospect\n');
           res.setHeader('Content-Type', 'application/json');
@@ -107,6 +121,10 @@ const vaultPlugin = {
           req.on('data', (chunk) => (body += chunk));
           req.on('end', async () => {
             const payload = JSON.parse(body) as { date: string; planSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>; retrospectSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }> };
+            if (!isIsoDate(payload.date)) {
+              sendBadRequest(res, 'Invalid or missing payload.date (expected YYYY-MM-DD).');
+              return;
+            }
             const filePath = vaultFilePath(payload.date);
             await fs.mkdir(path.dirname(filePath), { recursive: true });
             const existing = await fs.readFile(filePath, 'utf8').catch(() => '');
@@ -123,6 +141,10 @@ const vaultPlugin = {
           req.on('data', (chunk) => (body += chunk));
           req.on('end', async () => {
             const payload = JSON.parse(body) as { date: string; slot: { startMinute: number; endMinute: number; label: string; notes?: string } };
+            if (!isIsoDate(payload.date)) {
+              sendBadRequest(res, 'Invalid or missing payload.date (expected YYYY-MM-DD).');
+              return;
+            }
             const filePath = vaultFilePath(payload.date);
             const existing = await fs.readFile(filePath, 'utf8').catch(() => '');
             const planSlots = parseSection(existing, 'Plan');
@@ -147,6 +169,10 @@ const vaultPlugin = {
               | { action: 'update'; mode: 'plan' | 'retrospect'; date: string; where: CrudWhere; patch: Partial<SlotPayload>; limit?: number }
               | { action: 'delete'; mode: 'plan' | 'retrospect'; date: string; where: CrudWhere; limit?: number };
             if (payload.action === 'read') {
+              if (!isIsoDate(payload.fromDate) || (payload.toDate !== undefined && !isIsoDate(payload.toDate))) {
+                sendBadRequest(res, 'Invalid fromDate/toDate (expected YYYY-MM-DD).');
+                return;
+              }
               const dates = listDates(payload.fromDate, payload.toDate ?? payload.fromDate);
               const results = await Promise.all(dates.map(async (date) => {
                 const filePath = vaultFilePath(date);
@@ -156,6 +182,10 @@ const vaultPlugin = {
               }));
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ ok: true, results }));
+              return;
+            }
+            if (!isIsoDate(payload.date)) {
+              sendBadRequest(res, 'Invalid or missing payload.date (expected YYYY-MM-DD).');
               return;
             }
             const filePath = vaultFilePath(payload.date);

@@ -39,6 +39,13 @@ function upsertSlots(slots: TimeSlot[], additions: TimeSlot[], replaceId?: strin
   return [...kept, ...additions].sort((a, b) => a.startMinute - b.startMinute);
 }
 
+function formatClockMinute(minute: number): string {
+  const safe = ((minute % 1440) + 1440) % 1440;
+  const h = String(Math.floor(safe / 60)).padStart(2, '0');
+  const m = String(safe % 60).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 export default function App(): JSX.Element {
   const [dates] = useState(loadInitialDates);
   const [planDate, setPlanDate] = useState(() => localStorage.getItem(PLAN_DATE_STORAGE_KEY) ?? dates.planDate);
@@ -467,6 +474,7 @@ export default function App(): JSX.Element {
         <p className="vault-hint">Vault: /Users/yeshwanth/Vault/00-09 Me/03 Daily/YYYY/MM/YYYYMMDD-plan.md</p>
       </section>}
       <div className="clock-wrap" onDoubleClick={() => { if (clockOnly) void exitClockOnly(); }}>
+        {clockOnly && <div className="focus-time">{formatClockMinute(currentMinute)}</div>}
         <Clock24
           planSlots={planTimeline.slots}
           retrospectSlots={retrospectTimeline.slots}
