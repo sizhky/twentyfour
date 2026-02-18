@@ -61,6 +61,7 @@ export default function App(): JSX.Element {
   const [currentMinute, setCurrentMinute] = useState(() => new Date().getHours() * 60 + new Date().getMinutes());
   const [vaultSyncTick, setVaultSyncTick] = useState(0);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number; slotId?: string } | null>(null);
+  const [clockOnly, setClockOnly] = useState(false);
   const draftMemoryRef = useRef<Record<string, { startMinute: number; endMinute: number }>>({});
   const moveOriginRef = useRef<{ pointerMinute: number; startMinute: number; endMinute: number } | null>(null);
   const syncTimerRef = useRef<number | null>(null);
@@ -113,6 +114,14 @@ export default function App(): JSX.Element {
   useEffect(() => {
     localStorage.setItem(RETRO_DATE_STORAGE_KEY, retrospectDate);
   }, [retrospectDate]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) setClockOnly(false);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
 
   useEffect(() => {
     registerClockCrudTools();
@@ -404,9 +413,29 @@ export default function App(): JSX.Element {
       : 'What did you do in this time slot?';
   const panelClass = activeMode === 'plan' ? 'mode-plan' : 'mode-retro';
 
+  async function enterClockOnly(): Promise<void> {
+    setClockOnly(true);
+    try {
+      await document.documentElement.requestFullscreen?.();
+    } catch {
+      // Keep clock-only mode even if browser fullscreen fails.
+    }
+  }
+
+  async function exitClockOnly(): Promise<void> {
+    setClockOnly(false);
+    if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // Ignore exit errors; UI already restored.
+      }
+    }
+  }
+
   return (
-    <main className={`app ${panelClass}`}>
-      <section className="pill-row">
+    <main className={`app ${panelClass}${clockOnly ? ' clock-only' : ''}`}>
+      {!clockOnly && <section className="pill-row">
         <div className="pill-group">
           <button type="button" className="pill-btn pill-subtle" onClick={() => shiftFocusDate(-1)}>
             Prev
@@ -419,6 +448,9 @@ export default function App(): JSX.Element {
           </button>
         </div>
         <div className="pill-group">
+          <button type="button" className="pill-btn" onClick={() => void enterClockOnly()}>
+            Focus
+          </button>
           <button type="button" className="pill-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
             {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
@@ -426,13 +458,13 @@ export default function App(): JSX.Element {
             {activeMode === 'plan' ? 'Plan' : 'Retrospect'}
           </button>
         </div>
-      </section>
-      <section className="range-panel">
+      </section>}
+      {!clockOnly && <section className="range-panel">
         <h2 className="date-header">{focusDate}</h2>
         <p className="draft-header">{formatRange(draftStartMinute, draftEndMinute)}</p>
         <p className="vault-hint">Vault: /Users/yeshwanth/Vault/00-09 Me/03 Daily/YYYY/MM/YYYYMMDD-plan.md</p>
-      </section>
-      <div className="clock-wrap">
+      </section>}
+      <div className="clock-wrap" onDoubleClick={() => { if (clockOnly) void exitClockOnly(); }}>
         <Clock24
           planSlots={planTimeline.slots}
           retrospectSlots={retrospectTimeline.slots}
@@ -470,7 +502,7 @@ export default function App(): JSX.Element {
           </button>
         )}
       </div>
-      <section className="range-panel saved-panel">
+      {!clockOnly && <section className="range-panel saved-panel">
         <div className="saved-header">
           <strong>Saved Segments ({activeMode})</strong>
           <span>{activeTimeline.slots.length}</span>
@@ -488,8 +520,8 @@ export default function App(): JSX.Element {
             ))}
           </ul>
         )}
-      </section>
-      {!!error && <p className="error">{error}</p>}
+      </section>}
+      {!clockOnly && !!error && <p className="error">{error}</p>}
       <BottomSheet
         open={sheet.open}
         title={sheet.editingSlotId ? 'Edit Segment' : 'Record Segment'}
