@@ -26,6 +26,8 @@ const OUTER_RADIUS = 152;
 const INNER_RADIUS = 86;
 const DRAFT_RADIUS = (OUTER_RADIUS + INNER_RADIUS) / 2;
 const OUTER_RING_EDGE_RADIUS = OUTER_RADIUS + 18;
+const INNER_RAY_INSET = 12;
+const OUTER_RAY_INSET = 12;
 const PLAN_VARIANTS = 5;
 const RETRO_VARIANTS = 5;
 
@@ -192,6 +194,35 @@ export function Clock24({
           </text>
         );
       })}
+
+      <line
+        x1={handlePoint(startMinute, INNER_RADIUS - INNER_RAY_INSET).x}
+        y1={handlePoint(startMinute, INNER_RADIUS - INNER_RAY_INSET).y}
+        x2={handlePoint(startMinute, INNER_RADIUS + INNER_RAY_INSET).x}
+        y2={handlePoint(startMinute, INNER_RADIUS + INNER_RAY_INSET).y}
+        className="tick-ray tick-ray-start"
+      />
+      <line
+        x1={handlePoint(startMinute, OUTER_RADIUS - OUTER_RAY_INSET).x}
+        y1={handlePoint(startMinute, OUTER_RADIUS - OUTER_RAY_INSET).y}
+        x2={handlePoint(startMinute, OUTER_RADIUS + OUTER_RAY_INSET).x}
+        y2={handlePoint(startMinute, OUTER_RADIUS + OUTER_RAY_INSET).y}
+        className="tick-ray tick-ray-start"
+      />
+      <line
+        x1={handlePoint(endMinute, INNER_RADIUS - INNER_RAY_INSET).x}
+        y1={handlePoint(endMinute, INNER_RADIUS - INNER_RAY_INSET).y}
+        x2={handlePoint(endMinute, INNER_RADIUS + INNER_RAY_INSET).x}
+        y2={handlePoint(endMinute, INNER_RADIUS + INNER_RAY_INSET).y}
+        className="tick-ray tick-ray-end"
+      />
+      <line
+        x1={handlePoint(endMinute, OUTER_RADIUS - OUTER_RAY_INSET).x}
+        y1={handlePoint(endMinute, OUTER_RADIUS - OUTER_RAY_INSET).y}
+        x2={handlePoint(endMinute, OUTER_RADIUS + OUTER_RAY_INSET).x}
+        y2={handlePoint(endMinute, OUTER_RADIUS + OUTER_RAY_INSET).y}
+        className="tick-ray tick-ray-end"
+      />
 
       <circle
         cx={start.x}

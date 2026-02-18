@@ -53,6 +53,7 @@ export default function App(): JSX.Element {
   const [draftStartMinute, setDraftStartMinute] = useState(INITIAL_DRAFT.startMinute);
   const [draftEndMinute, setDraftEndMinute] = useState(INITIAL_DRAFT.endMinute);
   const [currentMinute, setCurrentMinute] = useState(() => new Date().getHours() * 60 + new Date().getMinutes());
+  const [vaultSyncTick, setVaultSyncTick] = useState(0);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number; slotId?: string } | null>(null);
   const draftMemoryRef = useRef<Record<string, { startMinute: number; endMinute: number }>>({});
   const moveOriginRef = useRef<{ pointerMinute: number; startMinute: number; endMinute: number } | null>(null);
@@ -127,12 +128,31 @@ export default function App(): JSX.Element {
         if (!res.ok) throw new Error(`Pull failed: ${res.status}`);
         const payload = (await res.json()) as { planSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>; retrospectSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>; filePath: string };
         if (!alive) return;
-        const makeTimeline = (mode: Mode, slots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>): DayTimeline => ({
-          ...(timelines[timelineKey(mode, focusDate)] ?? loadTimeline(mode, focusDate)),
-          slots: slots.map((slot) => newSlot({ startMinute: slot.startMinute, endMinute: slot.endMinute, label: slot.label, notes: slot.notes }))
-        });
-        persistTimeline(makeTimeline('plan', payload.planSlots));
-        persistTimeline(makeTimeline('retrospect', payload.retrospectSlots));
+        const sameSlots = (
+          current: TimeSlot[],
+          incoming: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>
+        ): boolean =>
+          current.length === incoming.length &&
+          current.every(
+            (slot, i) =>
+              slot.startMinute === incoming[i]?.startMinute &&
+              slot.endMinute === incoming[i]?.endMinute &&
+              slot.label === incoming[i]?.label &&
+              (slot.notes ?? '') === (incoming[i]?.notes ?? '')
+          );
+        const maybePersist = (
+          mode: Mode,
+          incoming: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>
+        ): void => {
+          const current = timelines[timelineKey(mode, focusDate)] ?? loadTimeline(mode, focusDate);
+          if (sameSlots(current.slots, incoming)) return;
+          persistTimeline({
+            ...current,
+            slots: incoming.map((slot) => newSlot({ startMinute: slot.startMinute, endMinute: slot.endMinute, label: slot.label, notes: slot.notes }))
+          });
+        };
+        maybePersist('plan', payload.planSlots);
+        maybePersist('retrospect', payload.retrospectSlots);
         setError('');
       } catch (e) {
         setError(String(e));
@@ -143,7 +163,12 @@ export default function App(): JSX.Element {
     return () => {
       alive = false;
     };
-  }, [focusDate]);
+  }, [focusDate, vaultSyncTick]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setVaultSyncTick((tick) => tick + 1), 15_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (syncingRef.current) return;
