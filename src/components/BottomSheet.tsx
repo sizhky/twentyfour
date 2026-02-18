@@ -12,6 +12,7 @@ type BottomSheetProps = {
   error?: string;
   isEditing?: boolean;
   onSubmit: (payload: { label: string; notes: string; startMinute: number; endMinute: number }) => void;
+  onSupersede?: () => void;
   onDelete?: () => void;
   onClose: () => void;
 };
@@ -28,6 +29,7 @@ export function BottomSheet({
   error,
   isEditing,
   onSubmit,
+  onSupersede,
   onDelete,
   onClose
 }: BottomSheetProps): JSX.Element | null {
@@ -97,6 +99,11 @@ export function BottomSheet({
           />
         </label>
         <div className="sheet-actions">
+          {isEditing && onSupersede && (
+            <button type="button" className="warn" onClick={onSupersede}>
+              Supersede
+            </button>
+          )}
           {isEditing && onDelete && (
             <button type="button" className="danger" onClick={onDelete}>
               Delete

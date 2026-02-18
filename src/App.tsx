@@ -144,19 +144,8 @@ export default function App(): JSX.Element {
     if (syncingRef.current) return;
     if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
     syncTimerRef.current = window.setTimeout(async () => {
-      const plan = timelines[timelineKey('plan', focusDate)] ?? loadTimeline('plan', focusDate);
-      const retrospect = timelines[timelineKey('retrospect', focusDate)] ?? loadTimeline('retrospect', focusDate);
       try {
-        const res = await fetch('/api/vault/day', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            date: focusDate,
-            planSlots: plan.slots.map((s) => ({ startMinute: s.startMinute, endMinute: s.endMinute, label: s.label, notes: s.notes ?? '' })),
-            retrospectSlots: retrospect.slots.map((s) => ({ startMinute: s.startMinute, endMinute: s.endMinute, label: s.label, notes: s.notes ?? '' }))
-          })
-        });
-        if (!res.ok) throw new Error(`Push failed: ${res.status}`);
+        await pushDayToVault(focusDate);
       } catch (e) {
         setError(String(e));
       }
@@ -166,6 +155,21 @@ export default function App(): JSX.Element {
   function persistTimeline(next: DayTimeline): void {
     saveTimeline(next);
     setTimelines((prev) => ({ ...prev, [timelineKey(next.mode, next.day.isoDate)]: next }));
+  }
+
+  async function pushDayToVault(isoDate: string): Promise<void> {
+    const plan = loadTimeline('plan', isoDate);
+    const retrospect = loadTimeline('retrospect', isoDate);
+    const res = await fetch('/api/vault/day', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date: isoDate,
+        planSlots: plan.slots.map((s) => ({ startMinute: s.startMinute, endMinute: s.endMinute, label: s.label, notes: s.notes ?? '' })),
+        retrospectSlots: retrospect.slots.map((s) => ({ startMinute: s.startMinute, endMinute: s.endMinute, label: s.label, notes: s.notes ?? '' }))
+      })
+    });
+    if (!res.ok) throw new Error(`Push failed: ${res.status}`);
   }
 
   function pointerMinute(clientX: number, clientY: number): number | null {
@@ -285,6 +289,7 @@ export default function App(): JSX.Element {
       });
       const updatedNext: DayTimeline = { ...nextTimeline, slots: upsertSlots(nextTimeline.slots, [nextSlot]) };
       persistTimeline(updatedNext);
+      void pushDayToVault(nextDate).catch((e) => setError(String(e)));
     }
 
     const newStart = payload.endMinute;
@@ -303,6 +308,37 @@ export default function App(): JSX.Element {
     };
     persistTimeline(updated);
     closeSheet();
+  }
+
+  async function supersedeEditingSlot(): Promise<void> {
+    if (!sheet.editingSlotId || activeMode !== 'plan') return;
+    const target = activeTimeline.slots.find((slot) => slot.id === sheet.editingSlotId);
+    if (!target) return;
+    try {
+      const res = await fetch('/api/vault/supersede', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: focusDate,
+          slot: {
+            startMinute: target.startMinute,
+            endMinute: target.endMinute,
+            label: target.label,
+            notes: target.notes ?? ''
+          }
+        })
+      });
+      if (!res.ok) throw new Error(`Supersede failed: ${res.status}`);
+      const updated: DayTimeline = {
+        ...activeTimeline,
+        slots: activeTimeline.slots.filter((slot) => slot.id !== target.id)
+      };
+      persistTimeline(updated);
+      closeSheet();
+      setError('');
+    } catch (e) {
+      setError(String(e));
+    }
   }
 
   const modePrompt =
@@ -409,6 +445,7 @@ export default function App(): JSX.Element {
         error={error}
         isEditing={!!sheet.editingSlotId}
         onSubmit={saveCurrentSlot}
+        onSupersede={activeMode === 'plan' ? () => void supersedeEditingSlot() : undefined}
         onDelete={deleteEditingSlot}
         onClose={closeSheet}
       />

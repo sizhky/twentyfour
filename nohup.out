@@ -1,0 +1,10 @@
+
+> 24-hour-clock@0.1.9 dev
+> vite --host 0.0.0.0 --port 5173
+
+
+  VITE v5.4.21  ready in 88 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://10.0.0.187:5173/
+  ➜  press h + enter to show help

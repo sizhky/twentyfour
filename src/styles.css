@@ -330,8 +330,9 @@ body {
 }
 
 .sheet-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
-.ghost, .primary, .danger { border: 0; border-radius: 10px; padding: 10px 12px; font-weight: 700; cursor: pointer; }
+.ghost, .primary, .danger, .warn { border: 0; border-radius: 10px; padding: 10px 12px; font-weight: 700; cursor: pointer; }
 .ghost { background: #e2e8f0; color: #0f172a; }
 .primary { background: #2563eb; color: #ffffff; }
 .danger { background: #dc2626; color: #ffffff; }
+.warn { background: #f59e0b; color: #111827; }
 .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
