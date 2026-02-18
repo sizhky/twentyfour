@@ -60,7 +60,7 @@ export default function App(): JSX.Element {
   const [draftEndMinute, setDraftEndMinute] = useState(INITIAL_DRAFT.endMinute);
   const [currentMinute, setCurrentMinute] = useState(() => new Date().getHours() * 60 + new Date().getMinutes());
   const [vaultSyncTick, setVaultSyncTick] = useState(0);
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number; slotId?: string } | null>(null);
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number; slotId?: string; mode?: Mode } | null>(null);
   const [clockOnly, setClockOnly] = useState(false);
   const draftMemoryRef = useRef<Record<string, { startMinute: number; endMinute: number }>>({});
   const moveOriginRef = useRef<{ pointerMinute: number; startMinute: number; endMinute: number } | null>(null);
@@ -280,9 +280,11 @@ export default function App(): JSX.Element {
     setError('');
   }
 
-  function openEditSheet(slotId: string): void {
-    const target = activeTimeline.slots.find((slot) => slot.id === slotId);
+  function openEditSheet(slotId: string, mode: Mode = activeMode): void {
+    const timeline = mode === 'plan' ? planTimeline : retrospectTimeline;
+    const target = timeline.slots.find((slot) => slot.id === slotId);
     if (!target) return;
+    if (mode !== activeMode) switchMode(mode);
     setDraftStartMinute(target.startMinute);
     setDraftEndMinute(target.endMinute % 1440);
     setSheet({ open: true, editingSlotId: target.id, label: target.label, notes: target.notes ?? '' });
@@ -483,7 +485,7 @@ export default function App(): JSX.Element {
           onMovePointerDown={startMoveDrag}
           onSegmentTap={(payload) => {
             if (isTouchRef.current) setTooltip(payload);
-            else openEditSheet(payload.slotId);
+            else openEditSheet(payload.slotId, payload.mode);
           }}
           onRecord={openCreateSheet}
           onSegmentHover={setTooltip}
@@ -494,7 +496,7 @@ export default function App(): JSX.Element {
             className={`segment-tooltip${tooltip.slotId ? ' clickable' : ''}`}
             style={{ left: tooltip.x + 10, top: tooltip.y - 28 }}
             onClick={() => {
-              if (tooltip.slotId) openEditSheet(tooltip.slotId);
+              if (tooltip.slotId) openEditSheet(tooltip.slotId, tooltip.mode ?? activeMode);
               setTooltip(null);
             }}
           >

@@ -14,7 +14,7 @@ type Clock24Props = {
   onMovePointerDown: (x: number, y: number) => void;
   onPointerMove: (x: number, y: number) => void;
   onPointerUp: () => void;
-  onSegmentTap: (payload: { slotId: string; text: string; x: number; y: number }) => void;
+  onSegmentTap: (payload: { slotId: string; mode: 'plan' | 'retrospect'; text: string; x: number; y: number }) => void;
   onRecord: () => void;
   onSegmentHover: (payload: { text: string; x: number; y: number } | null) => void;
 };
@@ -131,6 +131,9 @@ export function Clock24({
   const planRadius = activeMode === 'plan' ? OUTER_RADIUS : INNER_RADIUS;
   const retroRadius = activeMode === 'retrospect' ? OUTER_RADIUS : INNER_RADIUS;
   const activeRadius = activeMode === 'plan' ? planRadius : retroRadius;
+  const passiveMode = activeMode === 'plan' ? 'retrospect' : 'plan';
+  const passiveSlots = passiveMode === 'plan' ? planSlots : retrospectSlots;
+  const passiveRadius = passiveMode === 'plan' ? planRadius : retroRadius;
 
   return (
     <svg
@@ -202,7 +205,22 @@ export function Clock24({
             onPointerEnter={(e) => onSegmentHover({ text, x: e.clientX, y: e.clientY })}
             onPointerMove={(e) => onSegmentHover({ text, x: e.clientX, y: e.clientY })}
             onPointerLeave={() => onSegmentHover(null)}
-            onClick={(e) => onSegmentTap({ slotId: slot.id, text, x: e.clientX, y: e.clientY })}
+            onClick={(e) => onSegmentTap({ slotId: slot.id, mode: activeMode, text, x: e.clientX, y: e.clientY })}
+          />
+        );
+      })}
+      {passiveSlots.map((slot) => {
+        const path = segmentPath(passiveRadius, slot.startMinute, slot.endMinute);
+        const text = `${slot.label} (${minuteToText(slot.startMinute)}-${minuteToText(slot.endMinute)})`;
+        return (
+          <path
+            key={`passive-${passiveMode}-${slot.id}`}
+            d={path}
+            className="ring-hit"
+            onPointerEnter={(e) => onSegmentHover({ text, x: e.clientX, y: e.clientY })}
+            onPointerMove={(e) => onSegmentHover({ text, x: e.clientX, y: e.clientY })}
+            onPointerLeave={() => onSegmentHover(null)}
+            onClick={(e) => onSegmentTap({ slotId: slot.id, mode: passiveMode, text, x: e.clientX, y: e.clientY })}
           />
         );
       })}
