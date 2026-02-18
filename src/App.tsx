@@ -142,7 +142,9 @@ export default function App(): JSX.Element {
     (async () => {
       try {
         syncingRef.current = true;
-        const res = await fetch(`/api/vault/day?date=${focusDate}`);
+        const res = await fetch(`/api/vault/day?date=${focusDate}&t=${Date.now()}`, {
+          cache: 'no-store'
+        });
         if (!res.ok) throw new Error(`Pull failed: ${res.status}`);
         const payload = (await res.json()) as { planSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>; retrospectSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>; filePath: string };
         if (!alive) return;
@@ -184,8 +186,15 @@ export default function App(): JSX.Element {
   }, [focusDate, vaultSyncTick]);
 
   useEffect(() => {
-    const id = window.setInterval(() => setVaultSyncTick((tick) => tick + 1), 15_000);
-    return () => window.clearInterval(id);
+    const id = window.setInterval(() => setVaultSyncTick((tick) => tick + 1), 5_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setVaultSyncTick((tick) => tick + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   useEffect(() => {
