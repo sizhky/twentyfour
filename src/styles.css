@@ -226,6 +226,26 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .clock-wrap { position: relative; }
+.clock-only {
+  max-width: none;
+  width: 100vw;
+  padding: 0;
+}
+.clock-only .clock-wrap {
+  flex: 1 1 auto;
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  place-items: center;
+}
+.clock-only .clock {
+  width: min(100vw, 100dvh);
+  height: min(100vw, 100dvh);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+}
 .segment-tooltip {
   position: fixed;
   z-index: 1200;
