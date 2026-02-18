@@ -26,34 +26,84 @@ function parseSection(markdown: string, section: 'Plan' | 'Retrospect') {
     }));
 }
 
+function parseBlock(markdown: string, section: 'Plan' | 'Retrospect' | 'Superseded Plans'): string[] {
+  const block = markdown.match(new RegExp(`## ${section}\\n([\\s\\S]*?)(\\n## |$)`));
+  if (!block?.[1]) return [];
+  return block[1]
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
 function slotLine(slot: { startMinute: number; endMinute: number; label: string; notes?: string }): string {
   const t = (m: number) => `${String(Math.floor(((m % 1440) + 1440) % 1440 / 60)).padStart(2, '0')}:${String(((m % 1440) + 1440) % 1440 % 60).padStart(2, '0')}`;
   const notes = slot.notes?.trim() ? ` || ${slot.notes.trim().replaceAll('\n', '\\n')}` : '';
   return `- ${t(slot.startMinute)}-${t(slot.endMinute)} | ${slot.label}${notes}`;
 }
 
+function buildMarkdown(
+  planSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>,
+  retrospectSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>,
+  supersededLines: string[]
+): string {
+  return [
+    '## Plan',
+    ...planSlots.map(slotLine),
+    '',
+    '## Retrospect',
+    ...retrospectSlots.map(slotLine),
+    '',
+    '## Superseded Plans',
+    ...supersededLines,
+    ''
+  ].join('\n');
+}
+
 const vaultPlugin = {
   name: 'vault-sync-mock',
   configureServer(server: import('vite').ViteDevServer) {
-    server.middlewares.use('/api/vault/day', async (req, res) => {
+    server.middlewares.use('/api/vault', async (req, res) => {
       try {
-        if (req.method === 'GET') {
-          const date = new URL(req.url ?? '', 'http://local').searchParams.get('date') ?? '';
+        const url = new URL(req.url ?? '', 'http://local');
+        const pathname = url.pathname;
+        if (req.method === 'GET' && pathname.endsWith('/day')) {
+          const date = url.searchParams.get('date') ?? '';
           const filePath = vaultFilePath(date);
           const markdown = await fs.readFile(filePath, 'utf8').catch(() => '# Daily\n\n## Plan\n\n## Retrospect\n');
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ date, filePath, planSlots: parseSection(markdown, 'Plan'), retrospectSlots: parseSection(markdown, 'Retrospect') }));
           return;
         }
-        if (req.method === 'PUT') {
+        if (req.method === 'PUT' && pathname.endsWith('/day')) {
           let body = '';
           req.on('data', (chunk) => (body += chunk));
           req.on('end', async () => {
             const payload = JSON.parse(body) as { date: string; planSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }>; retrospectSlots: Array<{ startMinute: number; endMinute: number; label: string; notes?: string }> };
             const filePath = vaultFilePath(payload.date);
             await fs.mkdir(path.dirname(filePath), { recursive: true });
-            const md = ['## Plan', ...payload.planSlots.map(slotLine), '', '## Retrospect', ...payload.retrospectSlots.map(slotLine), ''].join('\n');
+            const existing = await fs.readFile(filePath, 'utf8').catch(() => '');
+            const supersededLines = parseBlock(existing, 'Superseded Plans');
+            const md = buildMarkdown(payload.planSlots, payload.retrospectSlots, supersededLines);
             await fs.writeFile(filePath, md, 'utf8');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true, filePath }));
+          });
+          return;
+        }
+        if (req.method === 'POST' && pathname.endsWith('/supersede')) {
+          let body = '';
+          req.on('data', (chunk) => (body += chunk));
+          req.on('end', async () => {
+            const payload = JSON.parse(body) as { date: string; slot: { startMinute: number; endMinute: number; label: string; notes?: string } };
+            const filePath = vaultFilePath(payload.date);
+            const existing = await fs.readFile(filePath, 'utf8').catch(() => '');
+            const planSlots = parseSection(existing, 'Plan');
+            const retrospectSlots = parseSection(existing, 'Retrospect');
+            const superseded = parseBlock(existing, 'Superseded Plans');
+            const retiredAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            superseded.push(`${slotLine(payload.slot)} || superseded_at=${retiredAt}`);
+            await fs.mkdir(path.dirname(filePath), { recursive: true });
+            await fs.writeFile(filePath, buildMarkdown(planSlots, retrospectSlots, superseded), 'utf8');
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ ok: true, filePath }));
           });
