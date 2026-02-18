@@ -11,6 +11,9 @@ type SheetState = { open: boolean; editingSlotId: string | null; label: string; 
 type ThemeMode = 'light' | 'dark';
 
 const INITIAL_DRAFT = { startMinute: 9 * 60, endMinute: 10 * 60 };
+const MODE_STORAGE_KEY = 'active-mode';
+const PLAN_DATE_STORAGE_KEY = 'plan-date';
+const RETRO_DATE_STORAGE_KEY = 'retrospect-date';
 
 function timelineKey(mode: Mode, isoDate: string): string {
   return `${mode}:${isoDate}`;
@@ -38,9 +41,12 @@ function upsertSlots(slots: TimeSlot[], additions: TimeSlot[], replaceId?: strin
 
 export default function App(): JSX.Element {
   const [dates] = useState(loadInitialDates);
-  const [planDate, setPlanDate] = useState(dates.planDate);
-  const [retrospectDate, setRetrospectDate] = useState(dates.retrospectDate);
-  const [activeMode, setActiveMode] = useState<Mode>('plan');
+  const [planDate, setPlanDate] = useState(() => localStorage.getItem(PLAN_DATE_STORAGE_KEY) ?? dates.planDate);
+  const [retrospectDate, setRetrospectDate] = useState(() => localStorage.getItem(RETRO_DATE_STORAGE_KEY) ?? dates.retrospectDate);
+  const [activeMode, setActiveMode] = useState<Mode>(() => {
+    const saved = localStorage.getItem(MODE_STORAGE_KEY);
+    return saved === 'retrospect' ? 'retrospect' : 'plan';
+  });
   const [timelines, setTimelines] = useState<Record<string, DayTimeline>>({});
   const [dragging, setDragging] = useState<ActiveDrag>(null);
   const [error, setError] = useState('');
@@ -95,6 +101,18 @@ export default function App(): JSX.Element {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme-mode', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem(MODE_STORAGE_KEY, activeMode);
+  }, [activeMode]);
+
+  useEffect(() => {
+    localStorage.setItem(PLAN_DATE_STORAGE_KEY, planDate);
+  }, [planDate]);
+
+  useEffect(() => {
+    localStorage.setItem(RETRO_DATE_STORAGE_KEY, retrospectDate);
+  }, [retrospectDate]);
 
   useEffect(() => {
     registerClockCrudTools();
